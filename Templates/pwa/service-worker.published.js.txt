@@ -1,0 +1,7 @@
+self.defaultUrl = '/';
+self.externalAssets = [{ url: '/' }];
+self.serverHandledUrls = [/\/api\//, /\/swagger\//];
+self.serverRenderedUrls = [/\/privacy$/];
+self.enableDiagnostics = true;
+
+self.importScripts('_content/Bit.Bswup/bit-bswup.sw.js');

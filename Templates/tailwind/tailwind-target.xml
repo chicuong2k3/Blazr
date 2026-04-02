@@ -1,0 +1,4 @@
+  <Target Name="BuildTailwindCSS" BeforeTargets="BeforeBuild">
+    <Message Text="Building Tailwind CSS..." Importance="high" />
+    <Exec Command="tailwindcss.exe -i wwwroot/css/app-input.css -o wwwroot/css/app.css" />
+  </Target>

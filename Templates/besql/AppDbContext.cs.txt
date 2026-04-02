@@ -1,0 +1,8 @@
+using Microsoft.EntityFrameworkCore;
+
+namespace {{PROJECT_NAME}}.Data;
+
+public sealed class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(options)
+{
+    public DbSet<TodoItem> Todos => Set<TodoItem>();
+}

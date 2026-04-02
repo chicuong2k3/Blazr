@@ -1,0 +1,10 @@
+namespace {{PROJECT_NAME}}.Data;
+
+public static class ServiceCollectionExtensions
+{
+    public static IServiceCollection Add{{PROJECT_NAME}}Data(this IServiceCollection services)
+    {
+        services.AddBesqlDbContextFactory<AppDbContext>();
+        return services;
+    }
+}

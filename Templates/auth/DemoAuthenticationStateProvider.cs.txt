@@ -1,0 +1,28 @@
+using Microsoft.AspNetCore.Components.Authorization;
+using System.Security.Claims;
+
+namespace {{PROJECT_NAME}}.Authentication;
+
+public sealed class DemoAuthenticationStateProvider : AuthenticationStateProvider
+{
+    private DemoUser _currentUser = new("1", "demo@local", ["Admin"]);
+
+    public override Task<AuthenticationState> GetAuthenticationStateAsync()
+    {
+        var identity = new ClaimsIdentity(
+        [
+            new Claim(ClaimTypes.NameIdentifier, _currentUser.Id),
+            new Claim(ClaimTypes.Name, _currentUser.Email),
+            .. _currentUser.Roles.Select(static role => new Claim(ClaimTypes.Role, role))
+        ],
+        authenticationType: "BlazrDemo");
+
+        return Task.FromResult(new AuthenticationState(new ClaimsPrincipal(identity)));
+    }
+
+    public void SignOut()
+    {
+        _currentUser = new DemoUser(string.Empty, string.Empty, []);
+        NotifyAuthenticationStateChanged(GetAuthenticationStateAsync());
+    }
+}

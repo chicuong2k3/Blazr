@@ -1,0 +1,11 @@
+namespace {{TEST_PROJECT_NAME}};
+
+public sealed class SmokeTests
+{
+    [Fact]
+    public void AppAssembly_Loads()
+    {
+        var assemblyName = typeof(global::Program).Assembly.GetName().Name;
+        Assert.Equal("{{PROJECT_NAME}}", assemblyName);
+    }
+}

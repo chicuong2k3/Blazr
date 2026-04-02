@@ -1,0 +1,4 @@
+<div class="blazr-bswup-host">
+    <BswupProgress AppContainer="#app" AutoReload="false" ShowLogs="true" />
+    <button id="bit-bswup-reload" style="display:none">Update available, click to reload</button>
+</div>

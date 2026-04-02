@@ -1,0 +1,9 @@
+namespace {{PROJECT_NAME}}.Http;
+
+public sealed class ApiClient(HttpClient httpClient)
+{
+    public async Task<string> GetHealthAsync(CancellationToken cancellationToken = default)
+    {
+        return await httpClient.GetStringAsync("health", cancellationToken);
+    }
+}

@@ -1,0 +1,9 @@
+using Refit;
+
+namespace {{PROJECT_NAME}}.Http;
+
+public interface IExampleApi
+{
+    [Get("/health")]
+    Task<string> GetHealthAsync(CancellationToken cancellationToken = default);
+}

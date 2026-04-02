@@ -1,0 +1,11 @@
+using Flurl.Http;
+
+namespace {{PROJECT_NAME}}.Http;
+
+public sealed class ApiClient(string baseUrl)
+{
+    public Task<string> GetHealthAsync(CancellationToken cancellationToken = default)
+    {
+        return baseUrl.AppendPathSegment("health").GetStringAsync(cancellationToken: cancellationToken);
+    }
+}

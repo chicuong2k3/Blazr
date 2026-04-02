@@ -9,6 +9,7 @@ var builder = Host.CreateApplicationBuilder(args);
 
 builder.Services.AddSingleton<IAnsiConsole>(AnsiConsole.Console);
 builder.Services.AddSingleton<CommandExecutionService>();
+builder.Services.AddSingleton<TemplateProvider>();
 builder.Services.AddSingleton<FeatureCatalog>();
 builder.Services.AddSingleton<ProjectLocator>();
 builder.Services.AddSingleton<ManifestService>();

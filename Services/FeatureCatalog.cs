@@ -5,6 +5,7 @@ namespace Blazr.Services;
 internal sealed class FeatureCatalog
 {
     private readonly CommandExecutionService commandExecutionService;
+    private readonly TemplateProvider templateProvider;
 
     public IReadOnlyCollection<FeatureDefinition> GetAll() => _features.Values;
 
@@ -15,9 +16,10 @@ internal sealed class FeatureCatalog
 
     private readonly Dictionary<string, FeatureDefinition> _features = new(StringComparer.OrdinalIgnoreCase);
 
-    public FeatureCatalog(CommandExecutionService commandExecutionService)
+    public FeatureCatalog(CommandExecutionService commandExecutionService, TemplateProvider templateProvider)
     {
         this.commandExecutionService = commandExecutionService;
+        this.templateProvider = templateProvider;
 
         _features["tailwind"] = new(
             "tailwind",
@@ -65,124 +67,27 @@ internal sealed class FeatureCatalog
         WriteFile(
             context.ProjectDirectory,
             Path.Combine("wwwroot", "css", "theme.css"),
-            """
-            :root {
-              --background: oklch(1 0 0);
-              --foreground: oklch(0.145 0 0);
-              --card: oklch(1 0 0);
-              --card-foreground: oklch(0.145 0 0);
-              --popover: oklch(1 0 0);
-              --popover-foreground: oklch(0.145 0 0);
-              --primary: oklch(0.205 0 0);
-              --primary-foreground: oklch(0.985 0 0);
-              --secondary: oklch(0.97 0 0);
-              --secondary-foreground: oklch(0.205 0 0);
-              --muted: oklch(0.97 0 0);
-              --muted-foreground: oklch(0.556 0 0);
-              --accent: oklch(0.97 0 0);
-              --accent-foreground: oklch(0.205 0 0);
-              --destructive: oklch(0.577 0.245 27.325);
-              --destructive-foreground: oklch(1 0 0);
-              --border: oklch(0.922 0 0);
-              --input: oklch(0.922 0 0);
-              --ring: oklch(0.708 0 0);
-              --radius: 0.625rem;
-            }
-
-            .dark {
-              --background: oklch(0.145 0 0);
-              --foreground: oklch(0.985 0 0);
-              --card: oklch(0.205 0 0);
-              --card-foreground: oklch(0.985 0 0);
-              --popover: oklch(0.205 0 0);
-              --popover-foreground: oklch(0.985 0 0);
-              --primary: oklch(0.985 0 0);
-              --primary-foreground: oklch(0.205 0 0);
-              --secondary: oklch(0.269 0 0);
-              --secondary-foreground: oklch(0.985 0 0);
-              --muted: oklch(0.269 0 0);
-              --muted-foreground: oklch(0.708 0 0);
-              --accent: oklch(0.269 0 0);
-              --accent-foreground: oklch(0.985 0 0);
-              --destructive: oklch(0.577 0.245 27.325);
-              --destructive-foreground: oklch(1 0 0);
-              --border: oklch(0.269 0 0);
-              --input: oklch(0.269 0 0);
-              --ring: oklch(0.439 0 0);
-            }
-
-            * {
-              border-color: var(--border);
-            }
-
-            body {
-              background-color: var(--background);
-              color: var(--foreground);
-            }
-            """,
+            templateProvider.Load("tailwind", "theme.css"),
             dryRun,
             operations);
 
         WriteFile(
             context.ProjectDirectory,
             Path.Combine("wwwroot", "css", "app-input.css"),
-            """
-            @import 'tailwindcss';
-            @import './theme.css';
-
-            @source "../Pages";
-            @source "../Shared";
-            @source "../Components";
-
-            @custom-variant dark (&:where(.dark, .dark *));
-
-            @theme inline {
-              --color-border: var(--border);
-              --color-input: var(--input);
-              --color-ring: var(--ring);
-              --color-background: var(--background);
-              --color-foreground: var(--foreground);
-              --color-primary: var(--primary);
-              --color-primary-foreground: var(--primary-foreground);
-              --color-secondary: var(--secondary);
-              --color-secondary-foreground: var(--secondary-foreground);
-              --color-destructive: var(--destructive);
-              --color-destructive-foreground: var(--destructive-foreground);
-              --color-muted: var(--muted);
-              --color-muted-foreground: var(--muted-foreground);
-              --color-accent: var(--accent);
-              --color-accent-foreground: var(--accent-foreground);
-              --color-popover: var(--popover);
-              --color-popover-foreground: var(--popover-foreground);
-              --color-card: var(--card);
-              --color-card-foreground: var(--card-foreground);
-              --font-sans: var(--font-sans, ui-sans-serif, system-ui, sans-serif);
-              --font-mono: var(--font-mono, ui-monospace, monospace);
-              --radius-lg: var(--radius);
-              --radius-md: calc(var(--radius) - 2px);
-              --radius-sm: calc(var(--radius) - 4px);
-            }
-            """,
+            templateProvider.Load("tailwind", "app-input.css"),
             dryRun,
             operations);
 
         WriteFile(
             context.ProjectDirectory,
             Path.Combine("wwwroot", "css", "app.css"),
-            """
-            /* Generated by tailwindcss.exe -i wwwroot/css/app-input.css -o wwwroot/css/app.css */
-            """,
+            templateProvider.Load("tailwind", "app.css"),
             dryRun,
             operations);
 
         EnsureBuildTarget(
             context.ProjectFilePath,
-            """
-              <Target Name="BuildTailwindCSS" BeforeTargets="BeforeBuild">
-                <Message Text="Building Tailwind CSS..." Importance="high" />
-                <Exec Command="tailwindcss.exe -i wwwroot/css/app-input.css -o wwwroot/css/app.css" />
-              </Target>
-            """,
+            templateProvider.Load("tailwind", "tailwind-target.xml"),
             dryRun,
             operations);
 
@@ -242,89 +147,28 @@ internal sealed class FeatureCatalog
         WriteFile(
             context.ProjectDirectory,
             Path.Combine("Authentication", "DemoUser.cs"),
-            """
-            namespace {{PROJECT_NAME}}.Authentication;
-
-            public sealed record DemoUser(string Id, string Email, string[] Roles);
-            """.Replace("{{PROJECT_NAME}}", context.ProjectName, StringComparison.Ordinal),
+            templateProvider.Load("auth", "DemoUser.cs.txt", context.ProjectName),
             dryRun,
             operations);
 
         WriteFile(
             context.ProjectDirectory,
             Path.Combine("Authentication", "DemoAuthenticationStateProvider.cs"),
-            """
-            using Microsoft.AspNetCore.Components.Authorization;
-            using System.Security.Claims;
-
-            namespace {{PROJECT_NAME}}.Authentication;
-
-            public sealed class DemoAuthenticationStateProvider : AuthenticationStateProvider
-            {
-                private DemoUser _currentUser = new("1", "demo@local", ["Admin"]);
-
-                public override Task<AuthenticationState> GetAuthenticationStateAsync()
-                {
-                    var identity = new ClaimsIdentity(
-                    [
-                        new Claim(ClaimTypes.NameIdentifier, _currentUser.Id),
-                        new Claim(ClaimTypes.Name, _currentUser.Email),
-                        .. _currentUser.Roles.Select(static role => new Claim(ClaimTypes.Role, role))
-                    ],
-                    authenticationType: "BlazrDemo");
-
-                    return Task.FromResult(new AuthenticationState(new ClaimsPrincipal(identity)));
-                }
-
-                public void SignOut()
-                {
-                    _currentUser = new DemoUser(string.Empty, string.Empty, []);
-                    NotifyAuthenticationStateChanged(GetAuthenticationStateAsync());
-                }
-            }
-            """.Replace("{{PROJECT_NAME}}", context.ProjectName, StringComparison.Ordinal),
+            templateProvider.Load("auth", "DemoAuthenticationStateProvider.cs.txt", context.ProjectName),
             dryRun,
             operations);
 
         WriteFile(
             context.ProjectDirectory,
             Path.Combine("Authentication", "ServiceCollectionExtensions.cs"),
-            """
-            using Microsoft.AspNetCore.Components.Authorization;
-
-            namespace {{PROJECT_NAME}}.Authentication;
-
-            public static class ServiceCollectionExtensions
-            {
-                public static IServiceCollection AddBlazrDemoAuthentication(this IServiceCollection services)
-                {
-                    services.AddAuthorizationCore();
-                    services.AddScoped<DemoAuthenticationStateProvider>();
-                    services.AddScoped<AuthenticationStateProvider>(static provider =>
-                        provider.GetRequiredService<DemoAuthenticationStateProvider>());
-
-                    return services;
-                }
-            }
-            """.Replace("{{PROJECT_NAME}}", context.ProjectName, StringComparison.Ordinal),
+            templateProvider.Load("auth", "ServiceCollectionExtensions.cs.txt", context.ProjectName),
             dryRun,
             operations);
 
         WriteFile(
             context.ProjectDirectory,
             Path.Combine("Authentication", "README.md"),
-            """
-            # Blazr Auth Starter
-
-            Register the services in `Program.cs`:
-
-            ```csharp
-            builder.Services.AddBlazrDemoAuthentication();
-            ```
-
-            Wrap your app with `CascadingAuthenticationState` and use `AuthorizeView` where needed.
-            Replace the demo provider with your real identity source when you move past the prototype stage.
-            """,
+            templateProvider.Load("auth", "README.md.txt"),
             dryRun,
             operations);
 
@@ -374,42 +218,21 @@ internal sealed class FeatureCatalog
         WriteFile(
             context.ProjectDirectory,
             Path.Combine("wwwroot", "service-worker.js"),
-            """
-            self.defaultUrl = '/';
-            self.externalAssets = [{ url: '/' }];
-            self.serverHandledUrls = [/\/api\//, /\/swagger\//];
-            self.serverRenderedUrls = [/\/privacy$/];
-            self.enableDiagnostics = true;
-
-            self.importScripts('_content/Bit.Bswup/bit-bswup.sw.js');
-            """,
+            templateProvider.Load("pwa", "service-worker.js.txt"),
             dryRun,
             operations);
 
         WriteFile(
             context.ProjectDirectory,
             Path.Combine("wwwroot", "service-worker.published.js"),
-            """
-            self.defaultUrl = '/';
-            self.externalAssets = [{ url: '/' }];
-            self.serverHandledUrls = [/\/api\//, /\/swagger\//];
-            self.serverRenderedUrls = [/\/privacy$/];
-            self.enableDiagnostics = true;
-
-            self.importScripts('_content/Bit.Bswup/bit-bswup.sw.js');
-            """,
+            templateProvider.Load("pwa", "service-worker.published.js.txt"),
             dryRun,
             operations);
 
         WriteFile(
             context.ProjectDirectory,
             ResolveComponentPath(context.ProjectDirectory, "BswupProgressHost.razor"),
-            """
-            <div class="blazr-bswup-host">
-                <BswupProgress AppContainer="#app" AutoReload="false" ShowLogs="true" />
-                <button id="bit-bswup-reload" style="display:none">Update available, click to reload</button>
-            </div>
-            """,
+            templateProvider.Load("pwa", "BswupProgressHost.razor.txt"),
             dryRun,
             operations);
 
@@ -445,50 +268,21 @@ internal sealed class FeatureCatalog
         WriteFile(
             context.ProjectDirectory,
             Path.Combine("Data", "AppDbContext.cs"),
-            """
-            using Microsoft.EntityFrameworkCore;
-
-            namespace {{PROJECT_NAME}}.Data;
-
-            public sealed class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(options)
-            {
-                public DbSet<TodoItem> Todos => Set<TodoItem>();
-            }
-            """.Replace("{{PROJECT_NAME}}", context.ProjectName, StringComparison.Ordinal),
+            templateProvider.Load("besql", "AppDbContext.cs.txt", context.ProjectName),
             dryRun,
             operations);
 
         WriteFile(
             context.ProjectDirectory,
             Path.Combine("Data", "TodoItem.cs"),
-            """
-            namespace {{PROJECT_NAME}}.Data;
-
-            public sealed class TodoItem
-            {
-                public int Id { get; set; }
-                public string Title { get; set; } = string.Empty;
-                public bool IsDone { get; set; }
-            }
-            """.Replace("{{PROJECT_NAME}}", context.ProjectName, StringComparison.Ordinal),
+            templateProvider.Load("besql", "TodoItem.cs.txt", context.ProjectName),
             dryRun,
             operations);
 
         WriteFile(
             context.ProjectDirectory,
             Path.Combine("Data", "ServiceCollectionExtensions.cs"),
-            """
-            namespace {{PROJECT_NAME}}.Data;
-
-            public static class ServiceCollectionExtensions
-            {
-                public static IServiceCollection Add{{PROJECT_NAME}}Data(this IServiceCollection services)
-                {
-                    services.AddBesqlDbContextFactory<AppDbContext>();
-                    return services;
-                }
-            }
-            """.Replace("{{PROJECT_NAME}}", context.ProjectName, StringComparison.Ordinal),
+            templateProvider.Load("besql", "ServiceCollectionExtensions.cs.txt", context.ProjectName),
             dryRun,
             operations);
 
@@ -520,35 +314,14 @@ internal sealed class FeatureCatalog
         WriteFile(
             context.ProjectDirectory,
             Path.Combine("Http", "ApiClient.cs"),
-            """
-            namespace {{PROJECT_NAME}}.Http;
-
-            public sealed class ApiClient(HttpClient httpClient)
-            {
-                public async Task<string> GetHealthAsync(CancellationToken cancellationToken = default)
-                {
-                    return await httpClient.GetStringAsync("health", cancellationToken);
-                }
-            }
-            """.Replace("{{PROJECT_NAME}}", context.ProjectName, StringComparison.Ordinal),
+            templateProvider.Load("httpclient", "ApiClient.cs.txt", context.ProjectName),
             dryRun,
             operations);
 
         WriteFile(
             context.ProjectDirectory,
             Path.Combine("Http", "ServiceCollectionExtensions.cs"),
-            """
-            namespace {{PROJECT_NAME}}.Http;
-
-            public static class ServiceCollectionExtensions
-            {
-                public static IServiceCollection Add{{PROJECT_NAME}}Http(this IServiceCollection services, Uri baseAddress)
-                {
-                    services.AddHttpClient<ApiClient>(client => client.BaseAddress = baseAddress);
-                    return services;
-                }
-            }
-            """.Replace("{{PROJECT_NAME}}", context.ProjectName, StringComparison.Ordinal),
+            templateProvider.Load("httpclient", "ServiceCollectionExtensions.cs.txt", context.ProjectName),
             dryRun,
             operations);
 
@@ -581,39 +354,14 @@ internal sealed class FeatureCatalog
         WriteFile(
             context.ProjectDirectory,
             Path.Combine("Http", "IExampleApi.cs"),
-            """
-            using Refit;
-
-            namespace {{PROJECT_NAME}}.Http;
-
-            public interface IExampleApi
-            {
-                [Get("/health")]
-                Task<string> GetHealthAsync(CancellationToken cancellationToken = default);
-            }
-            """.Replace("{{PROJECT_NAME}}", context.ProjectName, StringComparison.Ordinal),
+            templateProvider.Load("refit", "IExampleApi.cs.txt", context.ProjectName),
             dryRun,
             operations);
 
         WriteFile(
             context.ProjectDirectory,
             Path.Combine("Http", "ServiceCollectionExtensions.cs"),
-            """
-            using Refit;
-
-            namespace {{PROJECT_NAME}}.Http;
-
-            public static class ServiceCollectionExtensions
-            {
-                public static IServiceCollection Add{{PROJECT_NAME}}Refit(this IServiceCollection services, Uri baseAddress)
-                {
-                    services.AddRefitClient<IExampleApi>()
-                        .ConfigureHttpClient(client => client.BaseAddress = baseAddress);
-
-                    return services;
-                }
-            }
-            """.Replace("{{PROJECT_NAME}}", context.ProjectName, StringComparison.Ordinal),
+            templateProvider.Load("refit", "ServiceCollectionExtensions.cs.txt", context.ProjectName),
             dryRun,
             operations);
 
@@ -646,37 +394,14 @@ internal sealed class FeatureCatalog
         WriteFile(
             context.ProjectDirectory,
             Path.Combine("Http", "ApiClient.cs"),
-            """
-            using Flurl.Http;
-
-            namespace {{PROJECT_NAME}}.Http;
-
-            public sealed class ApiClient(string baseUrl)
-            {
-                public Task<string> GetHealthAsync(CancellationToken cancellationToken = default)
-                {
-                    return baseUrl.AppendPathSegment("health").GetStringAsync(cancellationToken: cancellationToken);
-                }
-            }
-            """.Replace("{{PROJECT_NAME}}", context.ProjectName, StringComparison.Ordinal),
+            templateProvider.Load("flurl", "ApiClient.cs.txt", context.ProjectName),
             dryRun,
             operations);
 
         WriteFile(
             context.ProjectDirectory,
             Path.Combine("Http", "ServiceCollectionExtensions.cs"),
-            """
-            namespace {{PROJECT_NAME}}.Http;
-
-            public static class ServiceCollectionExtensions
-            {
-                public static IServiceCollection Add{{PROJECT_NAME}}Flurl(this IServiceCollection services, string baseUrl)
-                {
-                    services.AddSingleton(new ApiClient(baseUrl));
-                    return services;
-                }
-            }
-            """.Replace("{{PROJECT_NAME}}", context.ProjectName, StringComparison.Ordinal),
+            templateProvider.Load("flurl", "ServiceCollectionExtensions.cs.txt", context.ProjectName),
             dryRun,
             operations);
 
@@ -705,48 +430,14 @@ internal sealed class FeatureCatalog
         WriteFile(
             testProjectDirectory,
             $"{testProjectName}.csproj",
-            $$"""
-            <Project Sdk="Microsoft.NET.Sdk">
-
-              <PropertyGroup>
-                <TargetFramework>net10.0</TargetFramework>
-                <ImplicitUsings>enable</ImplicitUsings>
-                <Nullable>enable</Nullable>
-                <IsPackable>false</IsPackable>
-              </PropertyGroup>
-
-              <ItemGroup>
-                <PackageReference Include="coverlet.collector" Version="6.0.4" />
-                <PackageReference Include="Microsoft.NET.Test.Sdk" Version="17.14.1" />
-                <PackageReference Include="xunit" Version="2.9.3" />
-                <PackageReference Include="xunit.runner.visualstudio" Version="3.1.3" />
-              </ItemGroup>
-
-              <ItemGroup>
-                <ProjectReference Include="..\{{context.ProjectName}}\{{context.ProjectName}}.csproj" />
-              </ItemGroup>
-
-            </Project>
-            """,
+            templateProvider.Load("test", "TestProject.csproj.txt", context.ProjectName),
             dryRun,
             operations);
 
         WriteFile(
             testProjectDirectory,
             "SmokeTests.cs",
-            $$"""
-            namespace {{testProjectName}};
-
-            public sealed class SmokeTests
-            {
-                [Fact]
-                public void AppAssembly_Loads()
-                {
-                    var assemblyName = typeof(global::Program).Assembly.GetName().Name;
-                    Assert.Equal("{{context.ProjectName}}", assemblyName);
-                }
-            }
-            """,
+            templateProvider.Load("test", "SmokeTests.cs.txt", context.ProjectName, testProjectName),
             dryRun,
             operations);
 
